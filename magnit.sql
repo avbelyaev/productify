@@ -41,14 +41,16 @@ CREATE OR REPLACE PROCEDURE PRC_SHEDULERS (
 )
 language plpgsql
 AS $$
+DECLARE
+	weekend_day varchar := 'в';
 BEGIN
 
 drop table days;
 create temp table days as
---select generate_series(p_DATE_BEGIN, p_DATE_END, '1 day'::interval);
-select generate_series('2019-01-01', '2019-01-10', '1 day'::interval);
+select generate_series(p_DATE_BEGIN, p_DATE_END, '1 day'::interval);
+--select generate_series('2019-01-01', '2019-01-10', '1 day'::interval);
 
-select * from days;
+--select * from days;
 
 DELETE FROM T_CONTRACTOR_WORK_DAY;
 
@@ -64,7 +66,7 @@ FROM SCHEDULERS AS s
 cross join days 
 where generate_series between s.DATE_BEGIN and s.DATE_END;
 
-select * from full_schedule;
+--select * from full_schedule;
 
 drop table schedule_by_day;
 create temp table schedule_by_day as
@@ -77,22 +79,25 @@ SELECT s.NAME
 	 , SUBSTR(s.SCHEDULE, COALESCE(NULLIF(s.RN % LENGTH(s.SCHEDULE), 0), LENGTH(s.SCHEDULE))::integer, 1) as schedule_day
 FROM full_schedule AS s;
 
-select * from schedule_by_day;
+--select * from schedule_by_day;
 
 INSERT INTO T_CONTRACTOR_WORK_DAY
 SELECT s.NAME
-	 , CASE WHEN s.schedule_day = 'д' THEN INTERVAL '8 hour' + CAST (s.date_current AS timestamp(3))
-			WHEN s.schedule_day = 'н' THEN INTERVAL '20 hours' + CAST (s.date_current AS timestamp(3))
-			WHEN s.schedule_day = 'с' THEN INTERVAL '8 hour' + CAST (s.date_current AS timestamp(3)) END AS DATE_BEGIN
+	 , CASE WHEN s.schedule_day = 'д' THEN INTERVAL '8 hour'   + s.date_current
+			WHEN s.schedule_day = 'н' THEN INTERVAL '20 hours' + s.date_current
+			WHEN s.schedule_day = 'с' THEN INTERVAL '8 hour'   + s.date_current END AS DATE_BEGIN
 
-	 , CASE WHEN s.schedule_day = 'д' THEN INTERVAL '20 hours' + CAST (s.date_current AS timestamp(3))
-			WHEN s.schedule_day = 'н' THEN INTERVAL '32 hours' + CAST (s.date_current AS timestamp(3))
-			WHEN s.schedule_day = 'с' THEN INTERVAL '32 hours' + CAST (s.date_current AS timestamp(3)) END AS DATE_END
+	 , CASE WHEN s.schedule_day = 'д' THEN INTERVAL '20 hours' + s.date_current
+			WHEN s.schedule_day = 'н' THEN INTERVAL '32 hours' + s.date_current
+			WHEN s.schedule_day = 'с' THEN INTERVAL '32 hours' + s.date_current END AS DATE_END
 FROM schedule_by_day AS s
-WHERE s.schedule_day != 'в';
+WHERE s.schedule_day != weekend_day;
 
 END;$$
 
 
 CALL PRC_SHEDULERS('2019-01-03', '2019-02-02');
+
+truncate table T_CONTRACTOR_WORK_DAY;
+select * from T_CONTRACTOR_WORK_DAY;
 
