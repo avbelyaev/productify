@@ -7,7 +7,6 @@
     - RPC (gRPC)
     - API
     - 3х-звенная архитектура (3-tier architecture)
-    - разработка сверху вниз и снизу вверх
     - HTTP
     - REST
     - GraphQL
